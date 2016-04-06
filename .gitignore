@@ -34,3 +34,5 @@
 # Eclipse project files
 .cproject
 .project
+.settings/*
+bin/
