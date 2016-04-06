@@ -3,9 +3,6 @@
 
 #include <stdlib.h>
 
-void* run_gui(void *arg)
-{
-	return NULL;
-}
+void* run_gui(void *arg);
 
 #endif /* GUI_H_ */
