@@ -8,8 +8,18 @@ struct regul_t {
 
 void* run_regul(regul_t *regul)
 {
-	pthread_mutex_lock(regul->mutex);
-	pthread_mutex_unlock(regul->mutex);
+	while(isdone() != 1)
+	{
+		regul_t.pitch_ref = 0;
+		regul_t.yaw_ref = 0;
+		/*
+		Switch for read_data() from the input here later.
+		*/
+
+		pthread_mutex_lock(regul->mutex);
+
+		pthread_mutex_unlock(regul->mutex);
+	}
 	return NULL;
 }
 

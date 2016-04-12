@@ -6,6 +6,8 @@
 
 typedef struct regul_t regul_t;
 
+float* limit(int u);
+
 void* run_regul(regul_t *regul);
 
 #endif /* REGULATOR_H_ */
