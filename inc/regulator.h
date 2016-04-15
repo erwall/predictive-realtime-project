@@ -4,7 +4,11 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-typedef struct regul_t regul_t;
+typedef struct regul_t {
+	int pitch_ref;
+	int yaw_ref;
+	pthread_mutex_t *mutex;
+} regul_t;
 
 float* limit(int u);
 

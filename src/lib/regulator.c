@@ -1,17 +1,10 @@
 #include "regulator.h"
 
-struct regul_t {
-	int pith_ref;
-	int yaw_ref;
-	pthread_mutex_t *mutex;
-} regul_t;
-
 void* run_regul(regul_t *regul)
 {
-	while(isdone() != 1)
-	{
-		regul_t.pitch_ref = 0;
-		regul_t.yaw_ref = 0;
+	while(1) {
+		regul->pitch_ref = 0;
+		regul->yaw_ref = 0;
 		/*
 		Switch for read_data() from the input here later.
 		*/
