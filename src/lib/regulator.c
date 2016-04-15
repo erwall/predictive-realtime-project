@@ -1,4 +1,5 @@
 #include "regulator.h"
+#include <sys/time.h>
 
 void* run_regul(void *input_structs_temp)
 {
@@ -10,14 +11,29 @@ void* run_regul(void *input_structs_temp)
 	while(0) {
 		//TODO if on
 		regul->pitch_ref = 0;
-		regul->yaw_ref = 0;
+		regul->yaw_ref = 0;		
+
 		/*
 		Switch for read_data() from the input here later.
 		*/
-
+		double h = 0,05; //Sample time [s] of the regulator. 
+		timespec start, finish;
+		double elapsed, t;
 		pthread_mutex_lock(regul->mutex);
+		clock_gettime(CLOCK_MONOTONIC, &start);
 
+		/*
+		control algorithm
+		*/
 		pthread_mutex_unlock(regul->mutex);
+		clock_gettime(CLOCK_MONOTONIC, &finish);
+		elapsed = finish.tv_nsec - start.tv_nsec;
+		t = h - (double)elapsed;
+		if (nanosleep(t, NULL) < 0) {
+			printf("Nanosleep failed.\n";
+		} else {
+			printf("Regul sleeping for %f.",t);
+		}
 	}
 	return NULL;
 }
