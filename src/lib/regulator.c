@@ -12,34 +12,32 @@ void* run_regul(void *input_structs_temp)
 		//TODO if on
 		regul->pitch_ref = 0;
 		regul->yaw_ref = 0;		
-
 		/*
 		Switch for read_data() from the input here later.
 		*/
-		double h = 0,05; //Sample time [s] of the regulator. 
+		double h = 0,05; //Sample time [s] of the regulator. Set better value.
 		timespec start, finish;
 		double elapsed, t;
 		pthread_mutex_lock(regul->mutex);
 		clock_gettime(CLOCK_MONOTONIC, &start);
-
 		/*
-		control algorithm
+		Control algorithm
 		*/
+		regul->pitch_ref = limit(regul->pitch_ref);
+		regul->yaw_ref = limit(regul->yaw_ref);
 		pthread_mutex_unlock(regul->mutex);
 		clock_gettime(CLOCK_MONOTONIC, &finish);
 		elapsed = finish.tv_nsec - start.tv_nsec;
 		t = h - (double)elapsed;
 		if (nanosleep(t, NULL) < 0) {
-			printf("Nanosleep failed.\n";
+			printf("Nanosleep failed. Exiting.\n";
+			return NULL;
 		} else {
-			printf("Regul sleeping for %f.",t);
+			printf("Regul sleeping for %f.\n",t);
 		}
 	}
 	return NULL;
 }
-
-
-
 
 regul_t* init_regul()
 {
@@ -72,4 +70,15 @@ void destroy_data(data_t* data)
 	pthread_mutex_destroy(data->mutex);
 	free(data->mutex);
 	free(data);
+}
+/*
+Limits the control signal.
+*/
+double* limit(double* u) {
+	if (*u > 10.0) {
+		*u = 10.0;
+	} else if (*u < -10.0) {
+		*u = -10.0;
+	}
+	return u;
 }
