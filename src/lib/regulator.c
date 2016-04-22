@@ -1,5 +1,16 @@
+#define _XOPEN_SOURCE 500
+
 #include "regulator.h"
-#include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdio.h>
+
+#include <pthread.h>
+#include <stdlib.h>
+
+
+
 
 void* run_regul(void *input_structs_temp)
 {
@@ -7,17 +18,17 @@ void* run_regul(void *input_structs_temp)
 	void **struct_pointer = (void **) input_structs_temp; //TODO charlie take a look at this
 	regul_t *regul = (regul_t *) *struct_pointer ;
 	data_t *data_buffer = (data_t *) *(struct_pointer+1);
-	timespec start, finish;
-	double elapsed, t;
+	clock_t begin, end;
+	
 	double u_pitch, u_yaw, y_pitch, y_yaw;
-	double h = 0,05; //Sample time [s] of the regulator. Set better value.
-	while(0) {
+	double h = 2; //Sample time [s] of the regulator. Set better value.
+	while(1) {
+		begin = clock();
 		//TODO if on	
 		/*
 		Switch for read_data() from the input here later.
 		*/
 		pthread_mutex_lock(regul->mutex);
-		clock_gettime(CLOCK_MONOTONIC, &start);
 		/*
 		Control algorithm
 		Read output
@@ -30,27 +41,33 @@ void* run_regul(void *input_structs_temp)
 		Calculate output (LQG/MPC)
 		*/
 		u_pitch = 0;
-		u:yaw = 0;
+		u_yaw = 0;
 		u_pitch = limit(u_pitch); //Make u somewhere
-		u_yaw= limit(u_yaw;
+		u_yaw= limit(u_yaw);
 		/*
 		Push output
 		Kalman 1;
 		trajectory planning
 		*/
 		pthread_mutex_unlock(regul->mutex);
+
 		//write to buffer. Lock buffer mutex
 		pthread_mutex_lock(data_buffer->mutex);
-		write_data(u_pitch,u_yawp,y_picth,y_yaw,data_buffer);
-		pthread_mutex_unlock(data_buffer->mutex)
-		clock_gettime(CLOCK_MONOTONIC, &finish);
-		elapsed = finish.tv_nsec - start.tv_nsec;
-		t = h - (double)elapsed;
-		if (nanosleep(t, NULL) < 0) {
-			printf("Nanosleep failed. Exiting.\n";
+		write_data(u_pitch,u_yaw,y_pitch,y_yaw,data_buffer);
+		pthread_mutex_unlock(data_buffer->mutex);
+
+		end = clock();
+
+		unsigned int sleep_time = 1000000*(h-(double)(end-begin)/CLOCKS_PER_SEC);
+		if (sleep_time <0) {
+			sleep_time = 0;
+		}
+		int stuff = usleep(sleep_time);
+		if (stuff<0) {
+			printf("usleep failed. Exiting.\n");
 			return NULL;
 		} else {
-			printf("Regul sleeping for %f.\n",t);
+			printf("Regul sleeping for %d micro s .\n",sleep_time);
 		}
 	}
 	return NULL;
@@ -89,20 +106,25 @@ void destroy_data(data_t* data)
 	free(data);
 }
 
-void add_data(data* data) {
+void add_data(data_t *data) {
 	
 }
 /*
 Limits the control signal.
 */
-double* limit(double* u) {
-	if (*u > 10.0) {
-		*u = 10.0;
-	} else if (*u < -10.0) {
-		*u = -10.0;
+double limit(double u) {
+	if (u > 10.0) {
+		u = 10.0;
+	} else if (u < -10.0) {
+		u = -10.0;
 	}
 	return u;
 }
 
-void write_buffer(double u_pitch,double u_yaw,double y_pitch,double y_yaw,data_t* data_buffer) {
+void write_data(double u_pitch,double u_yaw,double y_pitch,double y_yaw,data_t* data_buffer) {
+	*((data_buffer->buffer)+data_buffer->nbr_of_datapoints*4) = u_pitch;
+	*((data_buffer->buffer)+data_buffer->nbr_of_datapoints*4+1) = u_yaw;
+	*((data_buffer->buffer)+data_buffer->nbr_of_datapoints*4+2) = y_pitch;
+	*((data_buffer->buffer)+data_buffer->nbr_of_datapoints*4+3) = y_yaw;
+	data_buffer->nbr_of_datapoints = data_buffer->nbr_of_datapoints +1;
 }

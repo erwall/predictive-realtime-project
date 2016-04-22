@@ -27,7 +27,9 @@ typedef struct data_t {
 /**
 Makes sure u is within it bounds
 */
-float* limit(int u);
+double limit(double u);
+
+void write_data(double u_pitch,double u_yawp,double y_picth,double y_yaw,data_t *data_buffer);
 
 /**
 Method run by the thread
