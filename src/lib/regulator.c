@@ -7,25 +7,42 @@ void* run_regul(void *input_structs_temp)
 	void **struct_pointer = (void **) input_structs_temp; //TODO charlie take a look at this
 	regul_t *regul = (regul_t *) *struct_pointer ;
 	data_t *data_buffer = (data_t *) *(struct_pointer+1);
-
+	timespec start, finish;
+	double elapsed, t;
+	double u_pitch, u_yaw, y_pitch, y_yaw;
+	double h = 0,05; //Sample time [s] of the regulator. Set better value.
 	while(0) {
-		//TODO if on
-		regul->pitch_ref = 0;
-		regul->yaw_ref = 0;		
+		//TODO if on	
 		/*
 		Switch for read_data() from the input here later.
 		*/
-		double h = 0,05; //Sample time [s] of the regulator. Set better value.
-		timespec start, finish;
-		double elapsed, t;
 		pthread_mutex_lock(regul->mutex);
 		clock_gettime(CLOCK_MONOTONIC, &start);
 		/*
 		Control algorithm
+		Read output
 		*/
-		regul->pitch_ref = limit(regul->pitch_ref);
-		regul->yaw_ref = limit(regul->yaw_ref);
+		y_pitch = 0;
+		y_yaw = 0;
+		/*
+		Second Kalman
+		read reference (Trajoctory planing might deal with incremental reference changdes)
+		Calculate output (LQG/MPC)
+		*/
+		u_pitch = 0;
+		u:yaw = 0;
+		u_pitch = limit(u_pitch); //Make u somewhere
+		u_yaw= limit(u_yaw;
+		/*
+		Push output
+		Kalman 1;
+		trajectory planning
+		*/
 		pthread_mutex_unlock(regul->mutex);
+		//write to buffer. Lock buffer mutex
+		pthread_mutex_lock(data_buffer->mutex);
+		write_data(u_pitch,u_yawp,y_picth,y_yaw,data_buffer);
+		pthread_mutex_unlock(data_buffer->mutex)
 		clock_gettime(CLOCK_MONOTONIC, &finish);
 		elapsed = finish.tv_nsec - start.tv_nsec;
 		t = h - (double)elapsed;
@@ -71,6 +88,10 @@ void destroy_data(data_t* data)
 	free(data->mutex);
 	free(data);
 }
+
+void add_data(data* data) {
+	
+}
 /*
 Limits the control signal.
 */
@@ -81,4 +102,7 @@ double* limit(double* u) {
 		*u = -10.0;
 	}
 	return u;
+}
+
+void write_buffer(double u_pitch,double u_yaw,double y_pitch,double y_yaw,data_t* data_buffer) {
 }
