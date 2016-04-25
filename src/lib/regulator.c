@@ -12,18 +12,26 @@
 
 
 
+
 void* run_regul(void *input_structs_temp)
 {
 	/*Initialization*/
-	void **struct_pointer = (void **) input_structs_temp; //TODO charlie take a look at this
+	void **struct_pointer = (void **) input_structs_temp; 
 	regul_t *regul = (regul_t *) *struct_pointer ;
 	data_t *data_buffer = (data_t *) *(struct_pointer+1);
+
+
+
+
+
+
+
 	clock_t begin, end;
 	
 	double u_pitch, u_yaw, y_pitch, y_yaw;
 	double h = 2; //Sample time [s] of the regulator. Set better value.
 	while(1) {
-		begin = clock();
+		begin = clock(); //TODO this shouldnt be here, if we start late the next will be late to
 		//TODO if on	
 		/*
 		Switch for read_data() from the input here later.
@@ -56,6 +64,8 @@ void* run_regul(void *input_structs_temp)
 		write_data(u_pitch,u_yaw,y_pitch,y_yaw,data_buffer);
 		pthread_mutex_unlock(data_buffer->mutex);
 
+
+		/*Handle sleep */
 		end = clock();
 
 		unsigned int sleep_time = 1000000*(h-(double)(end-begin)/CLOCKS_PER_SEC);
