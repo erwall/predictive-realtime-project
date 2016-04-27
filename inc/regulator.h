@@ -12,6 +12,7 @@ typedef struct regul_t {
 	pthread_mutex_t *mutex;
 	double pitch_ref;
 	double yaw_ref;
+	char on;
 } regul_t;
 
 typedef struct data_t {
@@ -24,9 +25,13 @@ typedef struct data_t {
 	pthread_mutex_t *mutex;
 	int nbr_of_datapoints;
 	double* buffer;
-
-
 } data_t;
+
+typedef struct thread_args_t {
+	char run;
+	regul_t *regul;
+	data_t *data;
+} thread_args_t;
 
 /* Makes sure u is within it bounds */
 double limit(double u);

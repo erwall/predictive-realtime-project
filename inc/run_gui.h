@@ -1,8 +1,27 @@
-#ifndef GUI_H_
-#define GUI_H_
+#ifndef RUN_GUI_H_
+#define RUN_GUI_H_
 
-#include <stdlib.h>
+#include "regulator.h"
+#include <stdio.h>
 
-void* run_gui(void *arg);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif /* GUI_H_ */
+void *run_gui(void *arg);
+
+#ifdef NO_GUI
+void *run_gui(void *arg)
+{
+	thread_args_t* thread_args = (thread_args_t*) arg;
+	thread_args->regul->on = 1;
+
+	return NULL;
+}
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* RUN_GUI_H_ */

@@ -9,26 +9,24 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-void* run_regul(void *input_structs_temp)
+void* run_regul(void *arg)
 {
-	void **struct_pointer = (void **) input_structs_temp; 
-	regul_t *regul = (regul_t *) *struct_pointer ;
-	data_t *data_buffer = (data_t *) *(struct_pointer+1);
+	thread_args_t *thread_args = (thread_args_t*) arg;
+	regul_t *regul = thread_args->regul;
+	data_t *data = thread_args->data;
 
 	clock_t begin, end;
-	
+
 	double u_pitch, u_yaw, y_pitch, y_yaw;
 	double h = 2; //Sample time [s] of the regulator. Set better value.
-	while(1) {
+	while(thread_args->run) {
+		if (!regul->on)
+			continue;
 		/* TODO
 		 * This shouldnt be here, if we start late the next will be
 		 * late too
 		 */
 		begin = clock();
-
-		/* TODO
-		 * Check if regulator is on before proceeding.
-		 */
 
 		/* TODO
 		 * Switch for read_data() from the input here later.
@@ -54,15 +52,15 @@ void* run_regul(void *input_structs_temp)
 		pthread_mutex_unlock(regul->mutex);
 
 		/* Write to buffer. Lock buffer mutex */
-		pthread_mutex_lock(data_buffer->mutex);
-		write_data(u_pitch,u_yaw,y_pitch,y_yaw,data_buffer);
-		pthread_mutex_unlock(data_buffer->mutex);
+		pthread_mutex_lock(data->mutex);
+		write_data(u_pitch, u_yaw, y_pitch, y_yaw, data);
+		pthread_mutex_unlock(data->mutex);
 
 
 		/* Handle sleep */
 		end = clock();
 
-		unsigned long int sleep_time = 1000000 * (
+		long int sleep_time = 1000000 * (
 				h - (double)(end-begin) / CLOCKS_PER_SEC);
 		if (sleep_time < 0) {
 			sleep_time = 0;
@@ -72,13 +70,14 @@ void* run_regul(void *input_structs_temp)
 			printf("usleep failed. Exiting.\n");
 			return NULL;
 		} else {
-			printf("Regul sleeping for %d micro s .\n",sleep_time);
+			printf("Regul sleeping for %ld micro s .\n",sleep_time);
 		}
 	}
+
 	return NULL;
 }
 
-regul_t* init_regul()
+regul_t *init_regul()
 {
 	regul_t *regul = (regul_t*) malloc(sizeof(regul_t));
 	regul->mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
@@ -86,7 +85,7 @@ regul_t* init_regul()
 	return regul;
 }
 
-void destroy_regul(regul_t *regul)
+void free_regul(regul_t *regul)
 {
 	pthread_mutex_destroy(regul->mutex);
 	free(regul->mutex);
@@ -103,7 +102,7 @@ data_t *init_data()
 	return data;
 }
 
-void destroy_data(data_t *data)
+void free_data(data_t *data)
 {
 	free(data->buffer);
 	pthread_mutex_destroy(data->mutex);
