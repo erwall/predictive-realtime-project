@@ -9,6 +9,15 @@
 #include <pthread.h>
 #include <stdlib.h>
 
+#define PREDICTOR_TEN = 1;
+#define FILTER_TEN = 2;
+#define PREDICTOR_16 = 3;
+#define FILTER_16 = 4;
+
+#define REGULATOR_LQ = 0;
+#define REGULATOR_MPC = 1;
+
+
 void* run_regul(void *arg)
 {
 	thread_args_t *thread_args = (thread_args_t*) arg;
@@ -16,6 +25,8 @@ void* run_regul(void *arg)
 	data_t *data = thread_args->data;
 
 	init();
+	double states[16];
+	char regulator = 0;
 
 	/*Big rotor*/
 	analogInOpen(0);
@@ -29,6 +40,10 @@ void* run_regul(void *arg)
 
 	double u_pitch, u_yaw, y_pitch, y_yaw;
 	double h = 2; //Sample time [s] of the regulator. Set better value.
+
+	//Probably run first kalman here, atleast make sure we run the predictor one time
+	//before first filter.
+
 	while(thread_args->run) {
 		if (!regul->on) //Bad, doesn't take sleep() into account
 			continue;
@@ -38,35 +53,49 @@ void* run_regul(void *arg)
 		 */
 		begin = clock();
 
-		/* TODO
-		 * Switch for read_data() from the input here later.
-		 */
 
 		pthread_mutex_lock(regul->mutex);
 
 		/* Control algorithm and write output */
 		y_pitch = analogIn(0);
 		y_yaw = analogIn(1);
+		//Kalman filter and calc output
+		if (regulator ==REGULATOR_LQ) {
+			Kalman(FILTER_10,y_pitch,y_yaw,0,0,states);
+			//TODO calculate feedback using the matrix in simulink
+			//Just implement by hand Zzzz
+			u_pitch = 0;
+			u_yaw = 0;
 
-		/* Second Kalman
-		 * Read reference (Trajectory planning might deal with
-		 * incremental reference changes). Calculate output (LQG/MPC)
-		 */
-		u_pitch = 0;
-		u_yaw = 0;
+
+		} else if (regulator ==REGULATOR_MPC) {
+			Kalman(FILTER_16,y_pitch,y_yaw,0,0,states);
+			u_pitch = 0;
+			u_yaw = 0;
+		}
+
+		/* Push output*/
 		u_pitch = limit(u_pitch); //Make u somewhere
 		u_yaw= limit(u_yaw);
 		analogOut(0, u_pitch);
 		analogOut(1, u_yaw);
-
-		/* Push output, Kalman 1 and trajectory planning */
-
 		pthread_mutex_unlock(regul->mutex);
+
 
 		/* Write to buffer. Lock buffer mutex */
 		pthread_mutex_lock(data->mutex);
 		write_data(u_pitch, u_yaw, y_pitch, y_yaw, data);
 		pthread_mutex_unlock(data->mutex);
+
+		/*Kalman Predictor part*/
+		if(regulator==REGULATOR_LQ) {
+			Kalman(PREDICTOR_10,0,0,u_pitch,u_yaw,states)
+		} else if (regulator== REGULATOR_MPC) {
+			Kalman(PREDICTOR_16,0,0,u_pitch,u_yaw,states);
+		}
+		//TODO
+		//Before switching regulator, the last cycle should use the predictor
+		//for the mpc.
 
 		/* Handle sleep */
 		end = clock();
