@@ -15,12 +15,22 @@ void* run_regul(void *arg)
 	regul_t *regul = thread_args->regul;
 	data_t *data = thread_args->data;
 
+	init();
+
+	/*Big rotor*/
+	analogInOpen(0);
+	analogOutOpen(0);
+
+	/*Small rotor*/
+	analogInOpen(1);
+	analogOutOpen(1);
+
 	clock_t begin, end;
 
 	double u_pitch, u_yaw, y_pitch, y_yaw;
 	double h = 2; //Sample time [s] of the regulator. Set better value.
 	while(thread_args->run) {
-		if (!regul->on)
+		if (!regul->on) //Bad, doesn't take sleep() into account
 			continue;
 		/* TODO
 		 * This shouldnt be here, if we start late the next will be
@@ -35,8 +45,8 @@ void* run_regul(void *arg)
 		pthread_mutex_lock(regul->mutex);
 
 		/* Control algorithm and write output */
-		y_pitch = 0;
-		y_yaw = 0;
+		y_pitch = analogIn(0);
+		y_yaw = analogIn(1);
 
 		/* Second Kalman
 		 * Read reference (Trajectory planning might deal with
@@ -46,6 +56,8 @@ void* run_regul(void *arg)
 		u_yaw = 0;
 		u_pitch = limit(u_pitch); //Make u somewhere
 		u_yaw= limit(u_yaw);
+		analogOut(0, u_pitch);
+		analogOut(1, u_yaw);
 
 		/* Push output, Kalman 1 and trajectory planning */
 
@@ -55,7 +67,6 @@ void* run_regul(void *arg)
 		pthread_mutex_lock(data->mutex);
 		write_data(u_pitch, u_yaw, y_pitch, y_yaw, data);
 		pthread_mutex_unlock(data->mutex);
-
 
 		/* Handle sleep */
 		end = clock();
@@ -73,7 +84,13 @@ void* run_regul(void *arg)
 			printf("Regul sleeping for %ld micro s .\n",sleep_time);
 		}
 	}
-
+	/*Close all ports and set output to zero*/
+	analogOut(0,0);
+	analogOut(1,0);
+	analogInClose(0);
+	analogOutClose(0);
+	analogInClose(1);
+	analogOutClose(1);
 	return NULL;
 }
 
