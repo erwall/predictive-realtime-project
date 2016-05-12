@@ -9,22 +9,15 @@ extern "C" {
 #include <pthread.h>
 
 typedef struct regul_t {
-	pthread_mutex_t *mutex;
 	double pitch_ref;
 	double yaw_ref;
 	char on;
+	pthread_mutex_t *mutex;
 } regul_t;
 
 typedef struct data_t {
-	/* Idea for buffer:
-	Double vector of predetermined size. Put u1, u2, y1, y2 , then rinse and
-	repeat.	Keep track of number of data points. If there are zero data
-	points then it's empty and we cant plot. No plan to handle overflow,
-	just make it big enough, wont take much memory anyway.
-	*/
+	double u_yaw, u_pitch, y_yaw, y_pitch;
 	pthread_mutex_t *mutex;
-	int nbr_of_datapoints;
-	double* buffer;
 } data_t;
 
 typedef struct thread_args_t {
@@ -54,6 +47,18 @@ data_t* init_data();
 
 /* Free data_t members and struct */
 void free_data(data_t *data);
+
+#ifdef NO_HARDWARE
+	static void init() {};
+	static void analogInOpen(int channel) {};
+	static void analogOutOpen(int channel) {};
+	static double analogIn(int channel) {return 0.0;};
+	static void analogOut(int channel, double value) {};
+	static void analogInClose(int channel) {};
+	static void analogOutClose(int channel) {};
+	static void Kalman(int filter, double y_pitch, double y_yaw,
+			double u_pitch, double u_yaw, double states[16]) {};
+#endif
 
 #ifdef __cplusplus
 }
