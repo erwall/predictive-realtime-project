@@ -1,11 +1,8 @@
-#define _XOPEN_SOURCE 500
-
 #include "regulator.h"
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdio.h>
-
 #include <pthread.h>
 #include <stdlib.h>
 
@@ -17,6 +14,24 @@
 #define REGULATOR_LQ (0)
 #define REGULATOR_MPC (1)
 
+#define NS (1000000000l) /* Nanoseconds in a second */
+#define h (50000000l) /* In nanoseconds, must be < 1 second */
+
+#ifdef NO_HARDWARE
+	/* Dummy implementations for compiling without hardware and regulator
+	 * dependencies */
+	void init() {};
+	void analogInOpen(int channel) {};
+	void analogOutOpen(int channel) {};
+	double analogIn(int channel) {return 0.0;};
+	void analogOut(int channel, double value) {};
+	void analogInClose(int channel) {};
+	void analogOutClose(int channel) {};
+	void Kalman(int filter, double y_pitch, double y_yaw,
+			double u_pitch, double u_yaw, double states[16]) {};
+#else
+#include "io.c"
+#endif
 
 void* run_regul(void *arg)
 {
@@ -36,32 +51,22 @@ void* run_regul(void *arg)
 	analogInOpen(1);
 	analogOutOpen(1);
 
-	clock_t begin, end;
-	double computation_time;
-	long unsigned int sleep_time;
+	struct timespec ts = { .tv_sec = time(NULL), .tv_nsec = 0 };
 
 	double u_pitch, u_yaw, y_pitch, y_yaw;
-	double h = 1; //Sample time [s] of the regulator. Set better value.
 
 	//Probably run first kalman here, atleast make sure we run the predictor
 	//one time before first filter.
 
 	while(thread_args->run) {
-		/* TODO
-		 * This shouldnt be here, if we start late the next will be
-		 * late too
-		 */
-		begin = clock();
-
 		/* If regulator is off, jump to sleep */
 		if (!regul->on)
 			goto END_CLOCK;
 
-		pthread_mutex_lock(regul->mutex);
-
 		/* Control algorithm and write output */
 		y_pitch = analogIn(0);
 		y_yaw = analogIn(1);
+
 
 		//Kalman filter and calc output
 		if (regulator == REGULATOR_LQ) {
@@ -71,9 +76,11 @@ void* run_regul(void *arg)
 			u_pitch = 0;
 			u_yaw = 0;
 		} else if (regulator == REGULATOR_MPC) {
+			pthread_mutex_lock(regul->mutex);
 			Kalman(FILTER_16, y_pitch, y_yaw, 0, 0, states);
 			u_pitch = 0;
 			u_yaw = 0;
+			pthread_mutex_unlock(regul->mutex);
 		}
 
 		/* Push output*/
@@ -81,13 +88,9 @@ void* run_regul(void *arg)
 		u_yaw= limit(u_yaw);
 		analogOut(0, u_pitch);
 		analogOut(1, u_yaw);
-		pthread_mutex_unlock(regul->mutex);
-
 
 		/* Write to buffer. Lock buffer mutex */
-		pthread_mutex_lock(data->mutex);
 		write_data(u_pitch, u_yaw, y_pitch, y_yaw, data);
-		pthread_mutex_unlock(data->mutex);
 
 		/*Kalman Predictor part*/
 		if(regulator == REGULATOR_LQ) {
@@ -100,18 +103,7 @@ void* run_regul(void *arg)
 		//predictor for the mpc.
 
 		/* Handle sleep */
-		END_CLOCK: end = clock();
-
-		computation_time = (double)(end - begin) / CLOCKS_PER_SEC;
-		if (computation_time > h)
-			sleep_time = 0;
-		else
-			sleep_time = 1000000 * (h - computation_time);
-
-		if (usleep(sleep_time) != 0) {
-			printf("usleep failed. Exiting regulator thread.\n");
-			return NULL;
-		}
+		END_CLOCK: sleep_until(&ts);
 	}
 
 	/*Close all ports and set output to zero*/
@@ -122,6 +114,20 @@ void* run_regul(void *arg)
 	analogInClose(1);
 	analogOutClose(1);
 	return NULL;
+}
+
+int sleep_until(struct timespec *ts)
+{
+	ts->tv_nsec += h;
+	if (ts->tv_nsec >= NS) {
+		ts->tv_sec += 1;
+		ts->tv_nsec -= NS;
+	}
+
+	if (clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, ts, NULL))
+		return -1;
+	else
+		return 0;
 }
 
 regul_t *init_regul()
@@ -171,8 +177,10 @@ double limit(double u)
 void write_data(double u_pitch, double u_yaw, double y_pitch, double y_yaw,
 		data_t* data)
 {
+	pthread_mutex_lock(data->mutex);
 	data->u_pitch = u_pitch;
 	data->u_yaw = u_yaw;
 	data->y_pitch = y_pitch;
 	data->y_yaw = y_yaw;
+	pthread_mutex_unlock(data->mutex);
 }

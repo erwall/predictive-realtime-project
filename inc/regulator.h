@@ -26,6 +26,10 @@ typedef struct thread_args_t {
 	data_t *data;
 } thread_args_t;
 
+
+/* Absolute sleep to guarantee real time execution */
+int sleep_until(struct timespec *ts);
+
 /* Makes sure u is within it bounds */
 double limit(double u);
 
@@ -47,18 +51,6 @@ data_t* init_data();
 
 /* Free data_t members and struct */
 void free_data(data_t *data);
-
-#ifdef NO_HARDWARE
-	static void init() {};
-	static void analogInOpen(int channel) {};
-	static void analogOutOpen(int channel) {};
-	static double analogIn(int channel) {return 0.0;};
-	static void analogOut(int channel, double value) {};
-	static void analogInClose(int channel) {};
-	static void analogOutClose(int channel) {};
-	static void Kalman(int filter, double y_pitch, double y_yaw,
-			double u_pitch, double u_yaw, double states[16]) {};
-#endif
 
 #ifdef __cplusplus
 }
