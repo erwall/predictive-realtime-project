@@ -3,22 +3,25 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <sys/resource.h>
 
 int main()
 {
+	/* Thread and corresponding parameter declaration */
 	pthread_t regul_thread;
 	pthread_t gui_thread;
+	struct sched_param regul_sp = { 99 };
+	struct sched_param gui_sp = { 1 };
+	int policy = SCHED_RR;
 
-	/* Creating structs */
+	/* Creating thread arguments struct and its contents */
 	thread_args_t *thread_args = (thread_args_t*) malloc(
 			sizeof(thread_args_t));
 	thread_args->regul = init_regul();
 	thread_args->data = init_data();
 	thread_args->run = 1;
 
-	printf("Launching application...\n");
 	/* Creating Threads*/
-
 	if (pthread_create(&regul_thread, NULL, run_regul,
 			(void*) thread_args)) {
 		printf("Failed to create regulator thread.\n");
@@ -29,6 +32,10 @@ int main()
 		printf("Failed to create GUI thread.\n");
 		exit(1);
 	}
+
+	/* Only works if superuser or privileged user */
+	pthread_setschedparam(regul_thread, policy, &regul_sp);
+	pthread_setschedparam(gui_thread, policy, &gui_sp);
 
 	/* Wait for GUI thread to finish, which turns regulator off */
 	pthread_join(gui_thread, NULL);
