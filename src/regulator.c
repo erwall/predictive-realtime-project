@@ -53,7 +53,7 @@ void* run_regul(void *arg)
 
 	init();
 	double states[16];
-	char regulator = 1;
+	char regulator = REGULATOR_LQ;
 
 	/*Big rotor*/
 	analogInOpen(0);
@@ -75,11 +75,29 @@ void* run_regul(void *arg)
 	int *iter = &iter_val;
 	
 	init_data(qp_data);
+	int controlmoves = 0;
 
 	//Probably run first kalman here, atleast make sure we run the predictor
 	//one time before first filter.
 
 	while(thread_args->run) {
+		controlmoves++;
+
+
+		if (controlmoves > 160) {
+			regulator = REGULATOR_MPC;
+			printf("SWITCHING TO MPC \n");
+		}
+
+		if (controlmoves>250) {
+			pthread_mutex_lock(regul->mutex);
+			regul->pitch_ref = 1;
+			regul->yaw_ref = 1;
+			pthread_mutex_unlock(regul->mutex);
+			printf("SWITCHING SOME REFERENCES");
+		}
+
+
 		/* If regulator is off, jump to sleep */
 		if (!regul->on)
 			goto END_CLOCK;
