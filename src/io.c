@@ -240,7 +240,7 @@ void analogInClose(int channel)
     Close(&gAin.port[channel].port, channel);
   } else {
     printf("Comedi device doesn't exist.\n");
-    exit(0);    
+    exit(1);    
   }
 }
 /*Attempts to close an analogOut port*/
@@ -250,7 +250,7 @@ void analogOutClose(int channel)
     Close(&gAout.port[channel].port, channel);
   } else {
     printf("Comedi device doesn't exist.\n");
-    exit(0);
+    exit(1);
   }
 }
 
@@ -264,7 +264,7 @@ void init()
   conf = fopen("/etc/comedi.conf", "r");
   if (conf == 0) {
     printf("Couldn't find /etc/comedi.conf.\n");
-    exit(0);
+    exit(1);
   } else {
     while ((data = fgets(buffer, 80, conf))) {
       char file[80];

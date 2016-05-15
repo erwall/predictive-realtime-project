@@ -18,7 +18,7 @@ int main()
 	thread_args_t *thread_args = (thread_args_t*) malloc(
 			sizeof(thread_args_t));
 	thread_args->regul = init_regul();
-	thread_args->data = init_data();
+	thread_args->data = init_data_struct();
 	thread_args->run = 1;
 
 	/* Creating Threads*/
@@ -44,7 +44,7 @@ int main()
 
 	/* Free structs*/
 	free_regul(thread_args->regul);
-	free_data(thread_args->data);
+	free_data_struct(thread_args->data);
 	free(thread_args);
 
 	return 0;

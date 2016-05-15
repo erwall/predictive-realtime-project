@@ -47,14 +47,15 @@ regul_t* init_regul();
 void free_regul(regul_t *regul);
 
 /* Initialize data_t struct. Allocates memory for struct and members */
-data_t* init_data();
+data_t* init_data_struct();
 
 /* Free data_t members and struct */
-void free_data(data_t *data);
+void free_data_struct(data_t *data);
 
 void calc_LQ(double x[16], double *u1,double *u2);
 
 
+void calc_gt(double in[540], double y1_ref, double y2_ref);
 
 #ifdef __cplusplus
 }

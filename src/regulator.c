@@ -7,6 +7,13 @@
 #include <stdlib.h>
 #include "Kalman.h"
 
+//#include "QPgen.h"
+#include "data_struct.h"
+#include "init_data.c"
+#include "free_data.c"
+#include "QPgen.c"
+
+
 #define PREDICTOR_TEN (1)
 #define FILTER_TEN (2)
 #define PREDICTOR_16 (3)
@@ -17,6 +24,10 @@
 
 #define NS (1000000000l) /* Nanoseconds in a second */
 #define h (50000000l) /* In nanoseconds, must be < 1 second */
+
+#define NBR_OF_STATES (16)
+#define HORIZON (30)
+
 
 #ifdef NO_HARDWARE
 	/* Dummy implementations for compiling without hardware and regulator
@@ -42,7 +53,7 @@ void* run_regul(void *arg)
 
 	init();
 	double states[16];
-	char regulator = 0;
+	char regulator = 1;
 
 	/*Big rotor*/
 	analogInOpen(0);
@@ -54,7 +65,16 @@ void* run_regul(void *arg)
 
 	struct timespec ts = { .tv_sec = time(NULL), .tv_nsec = 0 };
 
-	double u_pitch, u_yaw, y_pitch, y_yaw;
+	double u_pitch, u_yaw, y_pitch, y_yaw, pitch_ref, yaw_ref;
+
+/* QP gen stuff */
+	struct DATA *qp_data = malloc(sizeof(struct DATA));
+	double *solution = malloc(sizeof(double)*540);
+	double *gt = malloc(sizeof(double)*540);
+	int iter_val = 0;
+	int *iter = &iter_val;
+	
+	init_data(qp_data);
 
 	//Probably run first kalman here, atleast make sure we run the predictor
 	//one time before first filter.
@@ -75,9 +95,17 @@ void* run_regul(void *arg)
 			calc_LQ(states, &u_pitch,&u_yaw);
 		} else if (regulator == REGULATOR_MPC) {
 			pthread_mutex_lock(regul->mutex);
+			pitch_ref = regul->pitch_ref;
+			yaw_ref = regul->yaw_ref;			
 			Kalman(FILTER_16, y_pitch, y_yaw, 0, 0, states);
-			u_pitch = 0;
-			u_yaw = 0;
+			//Fix GT
+			for (int i = 0;i!=16;i++) {
+				//*(state_pointer+1) = states[i]; //test to get rid of impl func decl
+			}
+			qp(qp_data,solution,iter,gt,states);
+			//extract output
+			u_pitch = solution[NBR_OF_STATES*HORIZON];
+			u_yaw = solution[NBR_OF_STATES*HORIZON+1];
 			pthread_mutex_unlock(regul->mutex);
 		}
 
@@ -111,6 +139,11 @@ void* run_regul(void *arg)
 	analogOutClose(0);
 	analogInClose(1);
 	analogOutClose(1);
+
+	/*Free qp gen*/
+	free_data(qp_data);
+	free(qp_data);
+
 	return NULL;
 }
 
@@ -143,7 +176,7 @@ void free_regul(regul_t *regul)
 	free(regul);
 }
 
-data_t *init_data()
+data_t *init_data_struct()
 {
 	data_t *data = (data_t*) malloc(sizeof(data_t));
 	data->mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
@@ -155,7 +188,7 @@ data_t *init_data()
 	return data;
 }
 
-void free_data(data_t *data)
+void free_data_struct(data_t *data)
 {
 	pthread_mutex_destroy(data->mutex);
 	free(data->mutex);
@@ -192,6 +225,18 @@ void calc_LQ(double x[16], double *u1,double *u2)
 		-8.4515*x[4] -80.4531*x[5] -6.8876*x[6] -77.0288*x[7]
 		-5.2523*x[8]  -73.4754*x[9]);
 }
+
+
+
+void calc_gt(double in[540], double y1_ref, double y2_ref) {
+	for (int i = 0; i<HORIZON;++i) {
+		in[i*NBR_OF_STATES] = y1_ref;
+		in[i*NBR_OF_STATES + 1] = y2_ref;		 
+	}
+	//Let rest be zero, dont really know what that means, YOLO.
+}
+
+
 
  /*-[166.1082  -10.8721;
    62.2063  -86.5549;
