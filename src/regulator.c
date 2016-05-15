@@ -84,12 +84,12 @@ void* run_regul(void *arg)
 		controlmoves++;
 
 
-		if (controlmoves == 160) {
+		if (controlmoves == 90) {
 			regulator = REGULATOR_MPC;
 			printf("SWITCHING TO MPC \n");
 		}
 
-		if (controlmoves==250) {
+		if (controlmoves==200) {
 			pthread_mutex_lock(regul->mutex);
 			regul->pitch_ref = 1;
 			regul->yaw_ref = 1;
@@ -116,14 +116,19 @@ void* run_regul(void *arg)
 			pitch_ref = regul->pitch_ref;
 			yaw_ref = regul->yaw_ref;			
 			Kalman(FILTER_16, y_pitch, y_yaw, 0, 0, states);
+			calc_gt(gt,pitch_ref,yaw_ref);
 			qp(qp_data,solution,iter,gt,states);
 			//extract output
 			u_pitch = solution[NBR_OF_STATES*HORIZON];
 			u_yaw = solution[NBR_OF_STATES*HORIZON+1];
+			printf("pith: %f, yaw: %f \n", u_pitch, u_yaw);
+			printf("pithref: %f, yawref: %f \n", pitch_ref, yaw_ref);
 			pthread_mutex_unlock(regul->mutex);
 		}
 
 		/* Push output*/
+		u_pitch = u_pitch + 2.7;
+		u_yaw = u_yaw + 4.3;
 		u_pitch = limit(u_pitch); //Make u somewhere
 		u_yaw= limit(u_yaw);
 		analogOut(0, u_pitch);
@@ -156,7 +161,6 @@ void* run_regul(void *arg)
 
 	/*Free qp gen*/
 	free_data(qp_data);
-	free(qp_data);
 
 	return NULL;
 }
@@ -240,14 +244,16 @@ void calc_LQ(double x[16], double *u1,double *u2)
 		-5.2523*x[8]  -73.4754*x[9]);
 }
 
-
-
 void calc_gt(double in[540], double y1_ref, double y2_ref) {
 	unsigned i;
 
 	for (i = 0; i<HORIZON;++i) {
 		in[i*NBR_OF_STATES] = y1_ref*4; //Not sure if this should be here
 		in[i*NBR_OF_STATES + 1] = y2_ref;		 
+
+	}
+	for (i = 480;i!=HORIZON*18;i++) {
+		in[i] = 0;
 	}
 	//Let rest be zero, dont really know what that means, YOLO.
 }
