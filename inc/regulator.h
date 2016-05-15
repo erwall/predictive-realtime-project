@@ -52,6 +52,10 @@ data_t* init_data();
 /* Free data_t members and struct */
 void free_data(data_t *data);
 
+void calc_LQ(double[16] states, double *u1,double *u2);
+
+
+
 #ifdef __cplusplus
 }
 #endif

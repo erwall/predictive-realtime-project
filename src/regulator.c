@@ -71,10 +71,7 @@ void* run_regul(void *arg)
 		//Kalman filter and calc output
 		if (regulator == REGULATOR_LQ) {
 			Kalman(FILTER_TEN, y_pitch, y_yaw, 0, 0, states);
-			//TODO calculate feedback using the matrix in simulink
-			//Just implement by hand
-			u_pitch = 0;
-			u_yaw = 0;
+			calc_LQ(states, *u_pitch,*u_yaw);
 		} else if (regulator == REGULATOR_MPC) {
 			pthread_mutex_lock(regul->mutex);
 			Kalman(FILTER_16, y_pitch, y_yaw, 0, 0, states);
@@ -184,3 +181,24 @@ void write_data(double u_pitch, double u_yaw, double y_pitch, double y_yaw,
 	data->y_yaw = y_yaw;
 	pthread_mutex_unlock(data->mutex);
 }
+
+void calc_LQ(double[16] x, double *u1,double *u2)
+{
+	*u1 = -(166.1082*x[0]+62.2063*x[1]+140.5585*x[2]+43.7195*x[3]
+		+ 115.9787*x[4] + 26.3260*x[5] + 92.7951*x[6] + 10.3428*x[7]
+		+ 71.3845*x[8]  -3.9580*x[9]);
+	*u2 = -(-10.8721*x[0]-86.5549*x[1]-9.8194*x[2]-83.6601*x[3]
+		-8.4515*x[4] -80.4531*x[5] -6.8876*x[6] -77.0288*x[7]
+		-5.2523*x[8]  -73.4754*x[9]);
+}
+
+ /*-[166.1082  -10.8721;
+   62.2063  -86.5549;
+  140.5585   -9.8194;
+   43.7195  -83.6601;
+  115.9787   -8.4515;
+   26.3260  -80.4531;
+   92.7951   -6.8876;
+   10.3428  -77.0288;
+   71.3845   -5.2523;
+   -3.9580  -73.4754;zeros(6,2)]'*/
