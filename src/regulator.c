@@ -84,17 +84,17 @@ void* run_regul(void *arg)
 		controlmoves++;
 
 
-		if (controlmoves > 160) {
+		if (controlmoves == 160) {
 			regulator = REGULATOR_MPC;
 			printf("SWITCHING TO MPC \n");
 		}
 
-		if (controlmoves>250) {
+		if (controlmoves==250) {
 			pthread_mutex_lock(regul->mutex);
 			regul->pitch_ref = 1;
 			regul->yaw_ref = 1;
 			pthread_mutex_unlock(regul->mutex);
-			printf("SWITCHING SOME REFERENCES");
+			printf("SWITCHING SOME REFERENCES \n");
 		}
 
 
@@ -246,7 +246,7 @@ void calc_gt(double in[540], double y1_ref, double y2_ref) {
 	unsigned i;
 
 	for (i = 0; i<HORIZON;++i) {
-		in[i*NBR_OF_STATES] = y1_ref;
+		in[i*NBR_OF_STATES] = y1_ref*4; //Not sure if this should be here
 		in[i*NBR_OF_STATES + 1] = y2_ref;		 
 	}
 	//Let rest be zero, dont really know what that means, YOLO.
