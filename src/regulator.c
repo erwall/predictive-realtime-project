@@ -116,10 +116,6 @@ void* run_regul(void *arg)
 			pitch_ref = regul->pitch_ref;
 			yaw_ref = regul->yaw_ref;			
 			Kalman(FILTER_16, y_pitch, y_yaw, 0, 0, states);
-			//Fix GT
-			for (int i = 0;i!=16;i++) {
-				//*(state_pointer+1) = states[i]; //test to get rid of impl func decl
-			}
 			qp(qp_data,solution,iter,gt,states);
 			//extract output
 			u_pitch = solution[NBR_OF_STATES*HORIZON];
@@ -175,8 +171,8 @@ int sleep_until(struct timespec *ts)
 
 	if (clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, ts, NULL))
 		return -1;
-	else
-		return 0;
+	
+	return 0;
 }
 
 regul_t *init_regul()
@@ -247,7 +243,9 @@ void calc_LQ(double x[16], double *u1,double *u2)
 
 
 void calc_gt(double in[540], double y1_ref, double y2_ref) {
-	for (int i = 0; i<HORIZON;++i) {
+	unsigned i;
+
+	for (i = 0; i<HORIZON;++i) {
 		in[i*NBR_OF_STATES] = y1_ref;
 		in[i*NBR_OF_STATES + 1] = y2_ref;		 
 	}
