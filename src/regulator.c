@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include "Kalman.h"
 
 #define PREDICTOR_TEN (1)
 #define FILTER_TEN (2)
@@ -30,7 +31,7 @@
 	void Kalman(int filter, double y_pitch, double y_yaw,
 			double u_pitch, double u_yaw, double states[16]) {};
 #else
-#include "io.c"
+#include "io.h"
 #endif
 
 void* run_regul(void *arg)
@@ -71,7 +72,7 @@ void* run_regul(void *arg)
 		//Kalman filter and calc output
 		if (regulator == REGULATOR_LQ) {
 			Kalman(FILTER_TEN, y_pitch, y_yaw, 0, 0, states);
-			calc_LQ(states, *u_pitch,*u_yaw);
+			calc_LQ(states, &u_pitch,&u_yaw);
 		} else if (regulator == REGULATOR_MPC) {
 			pthread_mutex_lock(regul->mutex);
 			Kalman(FILTER_16, y_pitch, y_yaw, 0, 0, states);
@@ -182,7 +183,7 @@ void write_data(double u_pitch, double u_yaw, double y_pitch, double y_yaw,
 	pthread_mutex_unlock(data->mutex);
 }
 
-void calc_LQ(double[16] x, double *u1,double *u2)
+void calc_LQ(double x[16], double *u1,double *u2)
 {
 	*u1 = -(166.1082*x[0]+62.2063*x[1]+140.5585*x[2]+43.7195*x[3]
 		+ 115.9787*x[4] + 26.3260*x[5] + 92.7951*x[6] + 10.3428*x[7]

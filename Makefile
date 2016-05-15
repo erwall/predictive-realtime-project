@@ -1,4 +1,4 @@
-CLIBS		= -lpthread -lrt
+CLIBS		= -LKalman/ -lpthread -lrt -lKalman
 LIBS		= -L/opt/Qt5.6.0/5.6/gcc_64/lib -lQt5Widgets -lQt5Gui \
 	-lQt5Core -lQt5PrintSupport -lGL $(CLIBS)
 LFLAGS		= -Wl,-z,origin -Wl,-rpath,\$$ORIGIN \
@@ -6,10 +6,12 @@ LFLAGS		= -Wl,-z,origin -Wl,-rpath,\$$ORIGIN \
 DEFINES		= -DQT_QML_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB
 CFLAGS		= -g -Wall -Iinc -fPIC
 CXXFLAGS	= -pipe -g -std=gnu++0x -Wall -W -D_REENTRANT -fPIC $(DEFINES)
-INCPATH		= -Iinc -I/opt/Qt5.6.0/5.6/gcc_64/include \
+INCPATH		= -IKalman \
+	-Iinc -I/opt/Qt5.6.0/5.6/gcc_64/include \
 	-I/opt/Qt5.6.0/5.6/gcc_64/include/QtWidgets \
 	-I/opt/Qt5.6.0/5.6/gcc_64/include/QtGui \
 	-I/opt/Qt5.6.0/5.6/gcc_64/include/QtCore \
+
 
 MOC = /opt/Qt5.6.0/5.6/gcc_64/bin/moc
 
@@ -37,13 +39,13 @@ nohworgui : src/main.c regulator.o
 	gcc $(CFLAGS) $^ $(CLIBS) -o main
 
 %.o : src/%.c
-	gcc -c $(CFLAGS) $< -o $@
+	gcc -c $(CFLAGS) $(INCPATH) $< -o $@
 
 %.o : src/%.cc
 	g++ -c $(CXXFLAGS) $(INCPATH) $< -o $@
 
 src/moc_%.cc : inc/%.h
 	$(MOC) $(DEFINES) $(INCPATH) $< -o $@
-	
+
 clean :
 	rm *.o

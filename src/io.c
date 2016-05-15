@@ -9,65 +9,11 @@
 #include <math.h>
 #include <unistd.h>
 
-/* Defining structs needed for working with the ports*/
-typedef struct ComediFile {
-  struct ComediFile *next;
-  int useCount;
-  char *name;
-  comedi_t *cf;
-} ComediFile;
+#include "io.h"
 
-typedef struct {
-  int chan;
-  int useCount;
-  ComediFile *file;
-  int subdev;
-  int index;
-} ComediPort;
-
-typedef struct {
-  ComediPort port;
-  int maxdata;
-  double min;
-  double max;
-  double delta;
-} AnalogPort;
-
-typedef struct {
-  ComediPort port;
-} DigitalPort;
-
-typedef struct {
-  ComediPort port;
-  int min;
-} EncoderPort;
 
 static ComediFile *gFile = 0;
 
-static struct {
-  int count;
-  AnalogPort *port;
-} gAin = { -1, 0 };
-
-static struct {
-  int count;
-  AnalogPort *port;
-} gAout = { -1, 0 };
-
-static struct {
-  int count;
-  DigitalPort *port;
-} gDin = { -1, 0 };
-
-static struct {
-  int count;
-  DigitalPort *port;
-} gDout = { -1, 0 };
-
-static struct {
-  int count;
-  EncoderPort *port;
-} gEin = { -1, 0 };
 
 /*Help method for opening file*/
 static int OpenFile(ComediFile *f, int chan) 
@@ -386,33 +332,4 @@ void init()
   }
 }
 
-int main()
-{
-init();
-analogInOpen(0);
-analogInOpen(1);
-analogOutOpen(0);
-analogOutOpen(1);
-double result, result1;
-int t = 0;
-
-while(t < 20)
-{	
-	result = analogIn(0);
-	result1 = analogIn(1);
-	analogOut(0,0);
-	printf("Analog 0: %f\n", result);
-	printf("Analog 1: %f\n", result1);
-	sleep(1);
-	t++;
-}
-analogOut(0,0);
-analogOut(1,0);
-analogInClose(0);
-analogInClose(1);
-analogOutClose(0);
-analogOutClose(1);
-
-return 0;
-}
 
