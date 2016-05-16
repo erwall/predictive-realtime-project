@@ -4,10 +4,10 @@
 #include <thread>
 #include <unistd.h>
 
-#define MINYAW (-5.0)
-#define MAXYAW (5.0)
-#define MINPITCH (-5.0)
-#define MAXPITCH (5.0)
+#define MINYAW (-10.0)
+#define MAXYAW (10.0)
+#define MINPITCH MINYAW
+#define MAXPITCH MAXYAW
 #define UPDATE_FREQUENCY (0.050) /* In seconds */
 #define UPDATE_FREQUENCY_US (50000U) /* In microseconds */
 #define TIMESCALE (30.0) /* In seconds */
@@ -60,12 +60,12 @@ GUI::GUI(regul_t *regul, QWidget *parent) : QMainWindow(parent)
 	QObject::connect(on_button, SIGNAL(toggled(bool)), SLOT(setOn(bool)));
 
 	/* Add widgets to layout */
-	grid_layout->addWidget(yaw_label, 0, 0, 1, 1);
-	grid_layout->addWidget(pitch_label, 1, 0, 1, 1);
-	grid_layout->addWidget(yaw_edit, 0, 1, 1, 1);
-	grid_layout->addWidget(pitch_edit, 1, 1, 1, 1);
-	grid_layout->addWidget(yaw_button, 0, 2, 1, 1);
-	grid_layout->addWidget(pitch_button, 1, 2, 1, 1);
+	grid_layout->addWidget(pitch_label, 0, 0, 1, 1);
+	grid_layout->addWidget(yaw_label, 1, 0, 1, 1);
+	grid_layout->addWidget(pitch_edit, 0, 1, 1, 1);
+	grid_layout->addWidget(yaw_edit, 1, 1, 1, 1);
+	grid_layout->addWidget(pitch_button, 0, 2, 1, 1);
+	grid_layout->addWidget(yaw_button, 1, 2, 1, 1);
 	grid_layout->addWidget(on_button, 2, 1, 1, 1);
 };
 
