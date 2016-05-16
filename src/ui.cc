@@ -4,10 +4,10 @@
 #include <thread>
 #include <unistd.h>
 
-#define MINYAW (0.0)
-#define MAXYAW (3.14)
-#define MINPITCH (0.0)
-#define MAXPITCH (3.14)
+#define MINYAW (-5.0)
+#define MAXYAW (5.0)
+#define MINPITCH (-5.0)
+#define MAXPITCH (5.0)
 #define UPDATE_FREQUENCY (0.050) /* In seconds */
 #define UPDATE_FREQUENCY_US (50000U) /* In microseconds */
 #define TIMESCALE (30.0) /* In seconds */
@@ -106,15 +106,19 @@ void GUI::closeEvent(QCloseEvent *event)
 
 /******** PLOTTER IMPLEMENTATION ********/
 
-Plotter::Plotter(data_t *data, QWidget *parent) : QMainWindow(parent)
+Plotter::Plotter(data_t *data, regul_t *regul, QWidget *parent)
+	: QMainWindow(parent)
 {
 	/* Initialization */
 	this->data = data;
+	this->regul = regul;
 	running = true;
 	u_yaw = 0;
 	u_pitch = 0;
 	y_yaw = 0;
 	y_pitch = 0;
+	ref_yaw = 0;
+	ref_pitch = 0;
 	first_time = 0;
 	latest_time = 0;
 	central_widget = new QWidget(this);
@@ -126,24 +130,53 @@ Plotter::Plotter(data_t *data, QWidget *parent) : QMainWindow(parent)
 	this->setCentralWidget(central_widget);
 	central_widget->setLayout(grid_layout);
 	this->setWindowTitle(QStringLiteral("Plotter"));
-	this->resize(900, 400);
-	central_widget->setGeometry(QRect(20, 10, 870, 380));
+	this->resize(900, 600);
+	central_widget->setGeometry(QRect(20, 10, 880, 580));
 	grid_layout->setSpacing(6);
 	grid_layout->setContentsMargins(10, 10, 10, 10);
 
 	/* Setup plots */
-	u_yaw_plot = control_plot->addGraph();
 	u_pitch_plot = control_plot->addGraph();
-	y_yaw_plot = measurement_plot->addGraph();
+	u_pitch_plot->setPen(QPen(Qt::red));
+	u_pitch_plot->setName(QStringLiteral("Pitch"));
+	u_yaw_plot = control_plot->addGraph();
+	u_yaw_plot->setPen(QPen(Qt::blue));
+	u_yaw_plot->setName(QStringLiteral("Yaw"));
 	y_pitch_plot = measurement_plot->addGraph();
+	y_pitch_plot->setPen(QPen(Qt::red));
+	y_pitch_plot->setName(QStringLiteral("Pitch"));
+	y_yaw_plot = measurement_plot->addGraph();
+	y_yaw_plot->setPen(QPen(Qt::blue));
+	y_yaw_plot->setName(QStringLiteral("Yaw"));
+	ref_pitch_plot = measurement_plot->addGraph();
+	ref_pitch_plot->setPen(QPen(Qt::red));
+	ref_pitch_plot->setName(QStringLiteral("Pitch ref."));
+	ref_yaw_plot = measurement_plot->addGraph();
+	ref_yaw_plot->setPen(QPen(Qt::blue));
+	ref_yaw_plot->setName(QStringLiteral("Yaw ref."));
 	control_plot->xAxis->setLabel("Time (s)");
 	control_plot->yAxis->setLabel("Voltage (V)");
 	control_plot->xAxis->setRange(0.0, TIMESCALE);
 	control_plot->yAxis->setRange(-10.0, 10.0);
+	control_plot->setLocale(QLocale::c());
+	control_plot->legend->setVisible(true);
+	control_plot->axisRect()->insetLayout()->setInsetAlignment(
+					0, Qt::AlignTop|Qt::AlignLeft);
+	control_plot->plotLayout()->insertRow(0);
+	control_plot->plotLayout()->addElement(0, 0,
+			new QCPPlotTitle(control_plot, "Control signal"));
 	measurement_plot->xAxis->setLabel("Time (s)");
-	measurement_plot->yAxis->setLabel("Angle (rad)");
+	measurement_plot->yAxis->setLabel("Angle sensor reading (V)");
 	measurement_plot->xAxis->setRange(0.0, TIMESCALE);
-	measurement_plot->yAxis->setRange(-3.14, 3.14);
+	measurement_plot->yAxis->setRange(MINYAW, MAXYAW);
+	measurement_plot->setLocale(QLocale::c());
+	measurement_plot->legend->setVisible(true);
+	measurement_plot->axisRect()->insetLayout()->setInsetAlignment(
+					0, Qt::AlignTop|Qt::AlignLeft);
+	measurement_plot->plotLayout()->insertRow(0);
+	measurement_plot->plotLayout()->addElement(0, 0,
+			new QCPPlotTitle(measurement_plot,
+					"Measurement and reference"));
 
 	/* Add widgets to layout */
 	grid_layout->addWidget(control_plot, 0, 0, 1, 1);
@@ -160,11 +193,19 @@ void Plotter::replot()
 	y_pitch = data->y_pitch;
 	pthread_mutex_unlock(data->mutex);
 
+	/* Read references */
+	pthread_mutex_lock(regul->mutex);
+	ref_yaw = regul->yaw_ref;
+	ref_pitch = regul->pitch_ref;
+	pthread_mutex_unlock(regul->mutex);
+
 	/* Add new datapoint in all plots */
 	u_yaw_plot->addData(latest_time, u_yaw);
 	u_pitch_plot->addData(latest_time, u_pitch);
 	y_yaw_plot->addData(latest_time, y_yaw);
 	y_pitch_plot->addData(latest_time, y_pitch);
+	ref_yaw_plot->addData(latest_time, ref_yaw);
+	ref_pitch_plot->addData(latest_time, ref_pitch);
 	latest_time += UPDATE_FREQUENCY;
 
 	if (latest_time > TIMESCALE) {
@@ -173,6 +214,8 @@ void Plotter::replot()
 		u_pitch_plot->removeData(first_time);
 		y_yaw_plot->removeData(first_time);
 		y_pitch_plot->removeData(first_time);
+		ref_yaw_plot->removeData(first_time);
+		ref_pitch_plot->removeData(first_time);
 		first_time += UPDATE_FREQUENCY;
 
 		/* Update axis ranges */
@@ -199,7 +242,7 @@ void runGUI(thread_args_t *thread_args)
 	/* Create Qt application and windows */
 	QApplication app(argc, argv);
 	GUI gui(thread_args->regul);
-	Plotter plotter(thread_args->data);
+	Plotter plotter(thread_args->data, thread_args->regul);
 
 	/* Position windows */
 	plotter.setGeometry(QStyle::alignedRect(Qt::LeftToRight,

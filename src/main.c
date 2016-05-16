@@ -36,7 +36,7 @@ int main()
 	/* Only works if superuser or privileged user */
 	pthread_setschedparam(regul_thread, policy, &regul_sp);
 	pthread_setschedparam(gui_thread, policy, &gui_sp);
-
+	
 	/* Wait for GUI thread to finish, which turns regulator off */
 	pthread_join(gui_thread, NULL);
 	/* Wait for regulator to finish last loop */
