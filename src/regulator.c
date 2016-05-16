@@ -85,6 +85,8 @@ void* run_regul(void *arg)
 		if (!regul->on) {
 			analogOut(0, 0);
 			analogOut(1, 0);
+			write_data(u_pitch = 0, u_yaw = 0,
+					y_pitch = 0, y_yaw = 0, data);
 			goto END_CLOCK;
 		}
 
