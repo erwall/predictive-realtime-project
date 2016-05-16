@@ -4,10 +4,10 @@
 #include <thread>
 #include <unistd.h>
 
-#define MINYAW (0.0)
-#define MAXYAW (3.14)
-#define MINPITCH (0.0)
-#define MAXPITCH (3.14)
+#define MINYAW (-10.0)
+#define MAXYAW (10.0)
+#define MINPITCH MINYAW
+#define MAXPITCH MAXYAW
 #define UPDATE_FREQUENCY (0.050) /* In seconds */
 #define UPDATE_FREQUENCY_US (50000U) /* In microseconds */
 #define TIMESCALE (30.0) /* In seconds */
@@ -60,12 +60,12 @@ GUI::GUI(regul_t *regul, QWidget *parent) : QMainWindow(parent)
 	QObject::connect(on_button, SIGNAL(toggled(bool)), SLOT(setOn(bool)));
 
 	/* Add widgets to layout */
-	grid_layout->addWidget(yaw_label, 0, 0, 1, 1);
-	grid_layout->addWidget(pitch_label, 1, 0, 1, 1);
-	grid_layout->addWidget(yaw_edit, 0, 1, 1, 1);
-	grid_layout->addWidget(pitch_edit, 1, 1, 1, 1);
-	grid_layout->addWidget(yaw_button, 0, 2, 1, 1);
-	grid_layout->addWidget(pitch_button, 1, 2, 1, 1);
+	grid_layout->addWidget(pitch_label, 0, 0, 1, 1);
+	grid_layout->addWidget(yaw_label, 1, 0, 1, 1);
+	grid_layout->addWidget(pitch_edit, 0, 1, 1, 1);
+	grid_layout->addWidget(yaw_edit, 1, 1, 1, 1);
+	grid_layout->addWidget(pitch_button, 0, 2, 1, 1);
+	grid_layout->addWidget(yaw_button, 1, 2, 1, 1);
 	grid_layout->addWidget(on_button, 2, 1, 1, 1);
 };
 
@@ -117,6 +117,8 @@ Plotter::Plotter(data_t *data, regul_t *regul, QWidget *parent)
 	u_pitch = 0;
 	y_yaw = 0;
 	y_pitch = 0;
+	ref_yaw = 0;
+	ref_pitch = 0;
 	first_time = 0;
 	latest_time = 0;
 	central_widget = new QWidget(this);
@@ -128,26 +130,53 @@ Plotter::Plotter(data_t *data, regul_t *regul, QWidget *parent)
 	this->setCentralWidget(central_widget);
 	central_widget->setLayout(grid_layout);
 	this->setWindowTitle(QStringLiteral("Plotter"));
-	this->resize(900, 400);
-	central_widget->setGeometry(QRect(20, 10, 870, 380));
+	this->resize(900, 600);
+	central_widget->setGeometry(QRect(20, 10, 880, 580));
 	grid_layout->setSpacing(6);
 	grid_layout->setContentsMargins(10, 10, 10, 10);
 
 	/* Setup plots */
-	u_yaw_plot = control_plot->addGraph();
 	u_pitch_plot = control_plot->addGraph();
-	y_yaw_plot = measurement_plot->addGraph();
+	u_pitch_plot->setPen(QPen(Qt::red));
+	u_pitch_plot->setName(QStringLiteral("Pitch"));
+	u_yaw_plot = control_plot->addGraph();
+	u_yaw_plot->setPen(QPen(Qt::blue));
+	u_yaw_plot->setName(QStringLiteral("Yaw"));
 	y_pitch_plot = measurement_plot->addGraph();
-	ref_yaw_plot = measurement_plot->addGraph();
+	y_pitch_plot->setPen(QPen(Qt::red));
+	y_pitch_plot->setName(QStringLiteral("Pitch"));
+	y_yaw_plot = measurement_plot->addGraph();
+	y_yaw_plot->setPen(QPen(Qt::blue));
+	y_yaw_plot->setName(QStringLiteral("Yaw"));
 	ref_pitch_plot = measurement_plot->addGraph();
+	ref_pitch_plot->setPen(QPen(Qt::red));
+	ref_pitch_plot->setName(QStringLiteral("Pitch ref."));
+	ref_yaw_plot = measurement_plot->addGraph();
+	ref_yaw_plot->setPen(QPen(Qt::blue));
+	ref_yaw_plot->setName(QStringLiteral("Yaw ref."));
 	control_plot->xAxis->setLabel("Time (s)");
 	control_plot->yAxis->setLabel("Voltage (V)");
 	control_plot->xAxis->setRange(0.0, TIMESCALE);
 	control_plot->yAxis->setRange(-10.0, 10.0);
+	control_plot->setLocale(QLocale::c());
+	control_plot->legend->setVisible(true);
+	control_plot->axisRect()->insetLayout()->setInsetAlignment(
+					0, Qt::AlignTop|Qt::AlignLeft);
+	control_plot->plotLayout()->insertRow(0);
+	control_plot->plotLayout()->addElement(0, 0,
+			new QCPPlotTitle(control_plot, "Control signal"));
 	measurement_plot->xAxis->setLabel("Time (s)");
-	measurement_plot->yAxis->setLabel("Angle (rad)");
+	measurement_plot->yAxis->setLabel("Angle sensor reading (V)");
 	measurement_plot->xAxis->setRange(0.0, TIMESCALE);
-	measurement_plot->yAxis->setRange(-3.14, 3.14);
+	measurement_plot->yAxis->setRange(MINYAW, MAXYAW);
+	measurement_plot->setLocale(QLocale::c());
+	measurement_plot->legend->setVisible(true);
+	measurement_plot->axisRect()->insetLayout()->setInsetAlignment(
+					0, Qt::AlignTop|Qt::AlignLeft);
+	measurement_plot->plotLayout()->insertRow(0);
+	measurement_plot->plotLayout()->addElement(0, 0,
+			new QCPPlotTitle(measurement_plot,
+					"Measurement and reference"));
 
 	/* Add widgets to layout */
 	grid_layout->addWidget(control_plot, 0, 0, 1, 1);

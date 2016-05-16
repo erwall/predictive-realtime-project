@@ -77,14 +77,13 @@ void* run_regul(void *arg)
 	init_data(qp_data);
 	int controlmoves = 0;
 
-	//Probably run first kalman here, atleast make sure we run the predictor
-	//one time before first filter.
-
 	while(thread_args->run) {
 		/* If regulator is off, jump to sleep */
 		if (!regul->on) {
 			analogOut(0, 0);
 			analogOut(1, 0);
+			write_data(u_pitch = 0, u_yaw = 0,
+					y_pitch = 0, y_yaw = 0, data);
 			goto END_CLOCK;
 		}
 
@@ -137,8 +136,6 @@ void* run_regul(void *arg)
 			Kalman(PREDICTOR_16, 0, 0, u_pitch, u_yaw, states);
 		}
 		//TODO
-		//Before switching regulator, the last cycle should use the
-		//predictor for the mpc.
 
 		/* Handle sleep */
 		END_CLOCK: sleep_until(&ts);
@@ -241,14 +238,13 @@ void calc_gt(double in[540], double y1_ref, double y2_ref) {
 	unsigned i;
 
 	for (i = 0; i<HORIZON;++i) {
-		in[i*NBR_OF_STATES] = y1_ref*4; //Not sure if this should be here
-		in[i*NBR_OF_STATES + 1] = y2_ref;		 
+		in[i*NBR_OF_STATES] = -y1_ref*4;
+		in[i*NBR_OF_STATES + 1] = -y2_ref;		 
 
 	}
 	for (i = 480;i!=HORIZON*18;i++) {
 		in[i] = 0;
 	}
-	//Let rest be zero, dont really know what that means, YOLO.
 }
 
 
