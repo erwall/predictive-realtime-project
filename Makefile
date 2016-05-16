@@ -7,6 +7,7 @@ DEFINES		= -DQT_QML_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB
 CFLAGS		= -g -Wall -Iinc -fPIC
 CXXFLAGS	= -pipe -g -std=gnu++0x -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 INCPATH		= -IKalman \
+		-Iqp_files \
 	-Iinc -I/opt/Qt5.6.0/5.6/gcc_64/include \
 	-I/opt/Qt5.6.0/5.6/gcc_64/include/QtWidgets \
 	-I/opt/Qt5.6.0/5.6/gcc_64/include/QtGui \
