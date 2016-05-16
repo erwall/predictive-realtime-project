@@ -81,26 +81,19 @@ void* run_regul(void *arg)
 	//one time before first filter.
 
 	while(thread_args->run) {
-		controlmoves++;
+		/* If regulator is off, jump to sleep */
+		if (!regul->on) {
+			analogOut(0, 0);
+			analogOut(1, 0);
+			goto END_CLOCK;
+		}
 
+		controlmoves += 1;
 
 		if (controlmoves == 90) {
 			regulator = REGULATOR_MPC;
 			printf("SWITCHING TO MPC \n");
 		}
-
-		if (controlmoves==200) {
-			pthread_mutex_lock(regul->mutex);
-			regul->pitch_ref = 1;
-			regul->yaw_ref = 1;
-			pthread_mutex_unlock(regul->mutex);
-			printf("SWITCHING SOME REFERENCES \n");
-		}
-
-
-		/* If regulator is off, jump to sleep */
-		if (!regul->on)
-			goto END_CLOCK;
 
 		/* Control algorithm and write output */
 		y_pitch = analogIn(0);
@@ -129,7 +122,7 @@ void* run_regul(void *arg)
 		/* Push output*/
 		u_pitch = u_pitch + 2.7;
 		u_yaw = u_yaw + 4.3;
-		u_pitch = limit(u_pitch); //Make u somewhere
+		u_pitch = limit(u_pitch);
 		u_yaw= limit(u_yaw);
 		analogOut(0, u_pitch);
 		analogOut(1, u_yaw);
