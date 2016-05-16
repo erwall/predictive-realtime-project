@@ -243,8 +243,8 @@ void calc_gt(double in[540], double y1_ref, double y2_ref) {
 	unsigned i;
 
 	for (i = 0; i<HORIZON;++i) {
-		in[i*NBR_OF_STATES] = y1_ref*4; //Not sure if this should be here
-		in[i*NBR_OF_STATES + 1] = y2_ref;		 
+		in[i*NBR_OF_STATES] = -y1_ref*4;
+		in[i*NBR_OF_STATES + 1] = -y2_ref;		 
 
 	}
 	for (i = 480;i!=HORIZON*18;i++) {
