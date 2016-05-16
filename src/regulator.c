@@ -39,7 +39,7 @@
 	void analogOut(int channel, double value) {};
 	void analogInClose(int channel) {};
 	void analogOutClose(int channel) {};
-	void Kalman(int filter, double y_pitch, double y_yaw,
+	void Kalman(char filter, double y_pitch, double y_yaw,
 			double u_pitch, double u_yaw, double states[16]) {};
 #else
 #include "io.h"

@@ -37,7 +37,7 @@ class Plotter : public QMainWindow
 {
 	Q_OBJECT
 public:
-	explicit Plotter(data_t *data, QWidget *parent = 0);
+	explicit Plotter(data_t *data, regul_t *regul, QWidget *parent = 0);
 	void closeEvent(QCloseEvent *event);
 	void replot();
 	bool running;
@@ -45,9 +45,12 @@ private:
 	QWidget *central_widget;
 	QGridLayout *grid_layout;
 	QCustomPlot *control_plot, *measurement_plot;
-	QCPGraph *u_yaw_plot, *u_pitch_plot, *y_yaw_plot, *y_pitch_plot;
+	QCPGraph *u_yaw_plot, *u_pitch_plot, *y_yaw_plot, *y_pitch_plot,
+		*ref_yaw_plot, *ref_pitch_plot;
 	data_t *data;
-	double u_yaw, u_pitch, y_yaw, y_pitch, first_time, latest_time;
+	regul_t *regul;
+	double u_yaw, u_pitch, y_yaw, y_pitch, ref_yaw, ref_pitch, first_time,
+		latest_time;
 };
 
 #endif /* UI_H_ */

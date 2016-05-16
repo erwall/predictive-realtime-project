@@ -106,10 +106,12 @@ void GUI::closeEvent(QCloseEvent *event)
 
 /******** PLOTTER IMPLEMENTATION ********/
 
-Plotter::Plotter(data_t *data, QWidget *parent) : QMainWindow(parent)
+Plotter::Plotter(data_t *data, regul_t *regul, QWidget *parent)
+	: QMainWindow(parent)
 {
 	/* Initialization */
 	this->data = data;
+	this->regul = regul;
 	running = true;
 	u_yaw = 0;
 	u_pitch = 0;
@@ -136,6 +138,8 @@ Plotter::Plotter(data_t *data, QWidget *parent) : QMainWindow(parent)
 	u_pitch_plot = control_plot->addGraph();
 	y_yaw_plot = measurement_plot->addGraph();
 	y_pitch_plot = measurement_plot->addGraph();
+	ref_yaw_plot = measurement_plot->addGraph();
+	ref_pitch_plot = measurement_plot->addGraph();
 	control_plot->xAxis->setLabel("Time (s)");
 	control_plot->yAxis->setLabel("Voltage (V)");
 	control_plot->xAxis->setRange(0.0, TIMESCALE);
@@ -160,11 +164,19 @@ void Plotter::replot()
 	y_pitch = data->y_pitch;
 	pthread_mutex_unlock(data->mutex);
 
+	/* Read references */
+	pthread_mutex_lock(regul->mutex);
+	ref_yaw = regul->yaw_ref;
+	ref_pitch = regul->pitch_ref;
+	pthread_mutex_unlock(regul->mutex);
+
 	/* Add new datapoint in all plots */
 	u_yaw_plot->addData(latest_time, u_yaw);
 	u_pitch_plot->addData(latest_time, u_pitch);
 	y_yaw_plot->addData(latest_time, y_yaw);
 	y_pitch_plot->addData(latest_time, y_pitch);
+	ref_yaw_plot->addData(latest_time, ref_yaw);
+	ref_pitch_plot->addData(latest_time, ref_pitch);
 	latest_time += UPDATE_FREQUENCY;
 
 	if (latest_time > TIMESCALE) {
@@ -173,6 +185,8 @@ void Plotter::replot()
 		u_pitch_plot->removeData(first_time);
 		y_yaw_plot->removeData(first_time);
 		y_pitch_plot->removeData(first_time);
+		ref_yaw_plot->removeData(first_time);
+		ref_pitch_plot->removeData(first_time);
 		first_time += UPDATE_FREQUENCY;
 
 		/* Update axis ranges */
@@ -199,7 +213,7 @@ void runGUI(thread_args_t *thread_args)
 	/* Create Qt application and windows */
 	QApplication app(argc, argv);
 	GUI gui(thread_args->regul);
-	Plotter plotter(thread_args->data);
+	Plotter plotter(thread_args->data, thread_args->regul);
 
 	/* Position windows */
 	plotter.setGeometry(QStyle::alignedRect(Qt::LeftToRight,
